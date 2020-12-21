@@ -30,9 +30,9 @@
 #define PLAYER_COLLISION_X	(200)		// 当たり判定
 #define PLAYER_COLLISION_Y	(175)		// 当たり判定
 #define PLAYER_COLLISION_Z	(200)		// 当たり判定
-#define WEAPON_COLLISION_X	(100)		// 武器の当たり判定
-#define WEAPON_COLLISION_Y	(50)		// 武器の当たり判定
-#define WEAPON_COLLISION_Z	(100)		// 武器の当たり判定
+#define WEAPON_COLLISION_X	(150)		// 武器の当たり判定
+#define WEAPON_COLLISION_Y	(150)		// 武器の当たり判定
+#define WEAPON_COLLISION_Z	(150)		// 武器の当たり判定
 #define PLAYER_RADIUS		(150)		// 半径
 #define PLAYER_BOMB			(80)		// ボム撃つのに必要なゲージ数
 #define PLAYER_LASER		(35)		// レーザー撃つのに必要なゲージ数
@@ -160,6 +160,7 @@ public:
 	void TimeLimit(void);											// タイムリミット
 	void SetState(PLAYER_STATE state);								// プレイヤー情報の設定
 	void SetMove(D3DXVECTOR3 move);									// 移動量の設定
+	D3DXVECTOR3 VectorMath(D3DXVECTOR3 TargetPos, float fSpeed);	// 追従の関数
 	HRESULT ReadFile(void);											// ファイルの読み込み
 	bool GetEnd(void);												// エンド情報
 	PLAYER_STATE GetState(void);									// プレイヤーの状態
@@ -202,6 +203,7 @@ private:
 	int m_nBulletCnt;								// 弾のカウント
 	int m_nBulletFlame;								// 弾のフレームカウント
 	int m_nBeamInter;								// ビームのインターバル
+	int m_nArmorCnt;								// アーマーのカウンター
 	bool m_bBulletFlag;								// バレットのフラグ
 	bool m_bJump;									// ジャンプのフラグ
 	bool m_bDush;									// ダッシュの処理
@@ -216,6 +218,8 @@ private:
 	bool m_bArmor;									// 無敵時間フラグ
 	bool m_bAttack;									// 攻撃フラグ
 	bool m_bWin;									// 勝利のフラグ
+	bool m_bStand;									// 立ち上がったときのフラグ
+	bool m_bFront;									// 前ダッシュのため
 	static int m_nPlayerAll;						// プレイヤーの数
 	D3DXMATRIX m_mtxWorld;							// ワールドマトリックス
 	CModelAnime *m_apModelAnime[MAX_MODEL_PARTS];	//モデルパーツ用のポインタ

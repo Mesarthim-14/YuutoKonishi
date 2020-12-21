@@ -270,12 +270,6 @@ bool CBullet2::Follow(void)
 		break;
 	}
 
-	float fPposx = pPlayer->GetPos().x, fPposz = pPlayer->GetPos().z;	// ‘ŠŽè‚ÌÀ•W
-	float fBposx = m_pos.x, fBposz = m_pos.z;							// ’e‚ÌÀ•W
-	float fAngle;														// Šp“x
-
-	fAngle = atan2f((fBposx - fPposx), (fBposz - fPposz));				// Šp“x‚ðŒˆ‚ß‚é
-
 	// ‘ŠŽè‚Æ’e‚Ì‹——£
 	float fDistance = sqrtf(
 		powf((pPlayer->GetPos().x - m_pos.x), 2) +
@@ -286,6 +280,7 @@ bool CBullet2::Follow(void)
 	case BULLET2_TYPE_NONE:
 	{
 		int nFollowDis = BEAM_FOLLOW_DISTANCE + rand() % 20 - rand() % 70;
+
 		// ˆê’è‚Ì‹——£‚És‚­‚Ü‚Å‚Í’Ç]
 		if (fDistance > BEAM_FOLLOW_DISTANCE)
 		{

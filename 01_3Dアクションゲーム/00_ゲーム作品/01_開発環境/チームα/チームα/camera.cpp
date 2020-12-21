@@ -250,7 +250,8 @@ void CCamera::Update(void)
 				m_posRDest = D3DXVECTOR3(PlayerPos[m_nCameraNum].x, PlayerPos[m_nCameraNum].y + PLAYER_HEIGHT, PlayerPos[m_nCameraNum].z);	//注視点設定
 
 				m_nWinPlayer = -1;
-																																			//設定値の反映
+
+				//設定値の反映
 				m_posV += (m_posVDest - m_posV);
 				m_posR += (m_posRDest - m_posR);
 			}
@@ -273,11 +274,11 @@ void CCamera::EndUpdate(D3DXVECTOR3 PlayerPos[], D3DXVECTOR3 PlayerRot[], int nW
 		//初期化後なら
 		if (m_fφ <= 0)
 		{
-			m_fφ = PlayerRot[m_nCameraNum].y + WIN_START_ROT_VERTICAL;												//プレイヤーの角度から横回転開始角度設定
-			m_fθ = WIN_START_ROT_HORIZONTAL;																		//縦回転開始角度設定
-			m_fDistance = WIN_START_DISTANCE;																		//距離の開始位置設定
+			m_fφ = PlayerRot[m_nCameraNum].y + WIN_START_ROT_VERTICAL;					//プレイヤーの角度から横回転開始角度設定
+			m_fθ = WIN_START_ROT_HORIZONTAL;											//縦回転開始角度設定
+			m_fDistance = WIN_START_DISTANCE;											//距離の開始位置設定
 			m_fDifference = WIN_END_ROT_VERTICAL - WIN_START_ROT_VERTICAL;				//プレイヤーの角度プラス開始終了角度の差
-			m_fEndVertical = PlayerRot[m_nCameraNum].y + WIN_END_ROT_VERTICAL;										//終了角度
+			m_fEndVertical = PlayerRot[m_nCameraNum].y + WIN_END_ROT_VERTICAL;			//終了角度
 		}
 
 		//変化量プラス処理
@@ -376,14 +377,20 @@ void CCamera::NomalUpdate(D3DXVECTOR3 PlayerPos[], D3DXVECTOR3 PlayerRot[])
 
 	// ゲーム開始後
 	if (CLife::GetReadey() == false)
-	{		//入力処理
-		if (CManager::GetJoypad()->GetJoystickTrigger(CInputJoypad::JOY_BUTTON_Y, m_nCameraNum) || pKeyInput->GetTrigger(DIK_TAB) && !m_bTarget&&CGame::GetPlayer(m_nCameraNum)->GetJump() == false)
+	{	//入力処理
+		if (CManager::GetJoypad()->GetJoystickTrigger(CInputJoypad::JOY_BUTTON_A, m_nCameraNum) || pKeyInput->GetTrigger(DIK_TAB) && !m_bTarget&&CGame::GetPlayer(m_nCameraNum)->GetJump() == false)
 		{
 			if (CGame::GetPlayer(m_nCameraNum)->GetJump() == false)
 			{
-				//ターゲット機能OFF
-				m_fθ = CAMERA_DEFAULT_Fθ;	//縦回転角固定
-				m_bTarget = true;			//ターゲットON
+				bool bArmor = CGame::GetPlayer(m_nCameraNum)->GetArmor();
+				CPlayer::PLAYER_STATE state = CGame::GetPlayer(m_nCameraNum)->GetState();
+
+				if (bArmor == false)
+				{
+					//ターゲット機能OFF
+					m_fθ = CAMERA_DEFAULT_Fθ;	//縦回転角固定
+					m_bTarget = true;			//ターゲットON
+				}
 			}
 		}
 	}
@@ -401,10 +408,12 @@ void CCamera::NomalUpdate(D3DXVECTOR3 PlayerPos[], D3DXVECTOR3 PlayerRot[])
 	{
 		//近すぎたらターゲット解除
 		if (PlayerPos[nCameraSecond].x <= PlayerPos[m_nCameraNum].x + JUDGMENT_RANGE && PlayerPos[m_nCameraNum].x - JUDGMENT_RANGE <= PlayerPos[nCameraSecond].x  &&
-			PlayerPos[nCameraSecond].z <= PlayerPos[m_nCameraNum].z + JUDGMENT_RANGE && PlayerPos[m_nCameraNum].z - JUDGMENT_RANGE <= PlayerPos[nCameraSecond].z)		{
+			PlayerPos[nCameraSecond].z <= PlayerPos[m_nCameraNum].z + JUDGMENT_RANGE && PlayerPos[m_nCameraNum].z - JUDGMENT_RANGE <= PlayerPos[nCameraSecond].z)		
+		{
 			//ターゲットOFF
 			m_bTarget = false;
 		}
+
 		//自分とターゲットの位置から角度取得
 		m_fφ = atan2f(PlayerPos[m_nCameraNum].x - PlayerPos[nCameraSecond].x, PlayerPos[m_nCameraNum].z - PlayerPos[nCameraSecond].z);
 

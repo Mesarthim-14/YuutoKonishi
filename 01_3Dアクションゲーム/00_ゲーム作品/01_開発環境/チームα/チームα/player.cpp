@@ -41,7 +41,8 @@
 //=============================================================================
 #define PLAYER_SPEED			(20.0f)						// プレイヤーの移動量
 #define PLAYER_DUSH				(37.5f)						// プレイヤーのダッシュ
-#define PLAYER_DUSH_INTER		(80)						// ダッシュができる長さ
+#define PLAYER_DUSH_INTER		(60)						// ダッシュができる長さ
+#define PLAYER_FRONT_DUSH		(40)						// 前ダッシュ
 #define DUSH_NONE_TIME			(50)						// ダッシュできない時間
 #define PLAYER_JUMP				(10.0f)						// ジャンプの処理
 #define GRAVITY_POWAR			(0.15f)						// 重力の強さ
@@ -52,18 +53,18 @@
 #define PLAYE_ROT_Y_RIGHT		(D3DXToRadian(0.0f))		// プレイヤーの縦軸右
 #define PLAYE_ROT_Y_BUCK		(D3DXToRadian(-90.0f))		// プレイヤーの縦軸後
 #define STICK_SENSITIVITY		(50.0f)						// スティック感度
-#define STATE_DAMAGE_TIME		(100)						// ダメージ状態のカウント
 #define STATE_EXPLOSION_TIME	(30)						// 爆発状態のカウント
 #define STATE_EXPLOSION_END		(500)						// 爆発状態の終了フレーム
 #define PLAYER_BEAM_NUM			(3)							// 一度に出すビームの数
 #define ONE_BEAM_INTER			(7)							// ビームの待機フレーム
 #define PLAYER_BEAM_INTER		(50)						// ビームの待機フレーム
 #define PLAYER_BOMB_INTER		(150)						// ボムの待機フレーム
-#define PLAYER_MISSILE			(150)						// ミサイルの待機フレーム
 #define PLAYER_LASER_INTER		(300)						// レーザーの待機フレーム
 #define PLAYER_SWORD_DAMAGE		(150)						// 近接の攻撃力
+#define PLAYER_STAND_ARMOR		(100)						// 立ち上がりの無敵時間
+#define PLAYER_DUSH_DISTANCE	(150.0f)					// ダッシュで近づける処理
 #define LBX_XFAILE_NAME "data/Text/motion_LBX.txt"			// LBXのファイルパス
-#define GANDAMU_XFAILE_NAME "data/Text/motion_gandamu.txt"	//ガンダムのファイルパス
+#define GANDAMU_XFAILE_NAME "data/Text/motion_gandamu.txt"	// ガンダムのファイルパス
 
 //=============================================================================
 // グローバル変数宣言
@@ -143,6 +144,9 @@ CPlayer::CPlayer(int nPriority) : CScene(nPriority)
 	m_nBulletFlame = 0;
 	m_bBulletFlag = false;
 	m_nBeamInter = 0;
+	m_nArmorCnt = 0;
+	m_bStand = false;
+	m_bFront = false;
 }
 
 //=============================================================================
@@ -194,6 +198,9 @@ HRESULT CPlayer::Init(D3DXVECTOR3 pos, D3DXVECTOR3 size)
 	m_nBulletFlame = 0;
 	m_bBulletFlag = false;
 	m_nBeamInter = 0;
+	m_nArmorCnt = 0;
+	m_bStand = false;
+	m_bFront = false;
 
 	for (int nCount = 0; nCount < MAX_PLAYER; nCount++)
 	{
@@ -443,6 +450,17 @@ void CPlayer::Update(void)
 			}
 		}
 
+		if (m_bStand == true)
+		{
+			m_nArmorCnt++;
+
+			if (m_nArmorCnt >= PLAYER_STAND_ARMOR)
+			{
+				m_bStand = false;
+				m_bArmor = false;
+			}
+		}
+
 		// タイムリミット
 		TimeLimit();
 
@@ -681,7 +699,7 @@ void CPlayer::SetMotion(MOTION_STATE motion)
 	case MOTION_IDOL:
 
 		// 無敵フラグの解除
-		m_bArmor = false;
+		m_bStand = true;
 		m_bAttack = false;
 		break;
 
@@ -722,6 +740,7 @@ void CPlayer::PlayerState(void)
 		{
 			m_nStateCounter = 0;
 			m_state = PLAYER_STATE_NORMAL;
+			m_bArmor = true;
 		}
 		break;
 
@@ -1218,11 +1237,11 @@ void CPlayer::PlayerControl()
 				Walk();
 			}
 
-			// ジャンプの処理
-			Jump();
-
 			// 急降下の処理
 			Fall();
+
+			// ジャンプの処理
+			Jump();
 
 			// 回避の処理
 			Dush();
@@ -1388,7 +1407,7 @@ void CPlayer::Jump(void)
 	CInputKeyboard *pKeyboard = CManager::GetKeyboard();
 
 	// SPACEキーを押したとき・コントローラのYを押したとき
-		if (CManager::GetJoypad()->GetJoystickTrigger(CInputJoypad::JOY_BUTTON_Y, m_nPlayerNum) && m_bJump == false	
+		if (CManager::GetJoypad()->GetJoystickTrigger(CInputJoypad::JOY_BUTTON_A, m_nPlayerNum) && m_bJump == false	
 			|| pKeyboard->GetTrigger(DIK_SPACE) && m_bJump == false)
 	{
 		// ジャンプの処理
@@ -1538,6 +1557,7 @@ void CPlayer::Dush(void)
 			{
 				//移動量初期化
 				m_move = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+
 				//ダッシュ時移動量設定
 				m_move.x -= cosf(m_fAngle)* PLAYER_DUSH;
 				m_move.z += sinf(m_fAngle)* PLAYER_DUSH;
@@ -1558,6 +1578,63 @@ void CPlayer::Dush(void)
 				}
 			}
 		}
+
+		// Xボタンの時
+		if (CManager::GetJoypad()->GetJoystickTrigger(CInputJoypad::JOY_BUTTON_Y, m_nPlayerNum))
+		{
+			// ジョイパッドの取得
+			DIJOYSTATE js = CInputJoypad::GetStick(m_nPlayerNum);
+
+			//入力が存在する
+			if (js.lX != 0.0f || js.lY != 0.0f)
+			{
+				//移動量初期化
+				m_move = D3DXVECTOR3(0.0f, 0.0f, 0.0f);
+
+				// 前ダッシュの処理
+				m_bFront = true;
+
+				m_bDush = true;
+				m_nDushFlame += PLAYER_FRONT_DUSH;
+				m_bWalk = false;
+
+				//ターボ音
+				pSound->Play(CSound::SOUND_LABEL_SE_TURBO);
+
+				// 地上にいたら
+				if (m_bJump == false)
+				{
+					// 砂の生成
+					CSand::Create(D3DXVECTOR3(m_pos.x, 0.0f, m_pos.z),
+						D3DXVECTOR3(0.0f, 0.0f, 0.0f), D3DXVECTOR3(m_rot.x + 0.0f, m_rot.y, m_rot.z + 0.0f),
+						D3DXVECTOR3(SAND_SIZE_X, SAND_SIZE_Y, SAND_SIZE_Z));
+				}
+				D3DXVECTOR3 TargetPos = D3DXVECTOR3(m_pos.x - sinf(m_rot.y) * 70.0f, m_pos.y - 50.0f, m_pos.z - cosf(m_rot.y) * 70.0f);
+
+				for (int nCount = 0; nCount <= MAX_BOOST; nCount++)
+				{
+					if (m_pBoost[nCount] == NULL)
+					{
+						// ブースト処理
+						m_pBoost[nCount] = CBoost::Create(TargetPos + m_move,
+							D3DXVECTOR3(m_rot.x + D3DXToRadian(270.0f), m_rot.y + 0.0f, m_rot.z + 0.0f), D3DXVECTOR3(BOOST_SIZE_X, BOOST_SIZE_Y, BOOST_SIZE_Z), m_nPlayerNum);
+					}
+				}
+
+				//左ブーストモーションの再生
+				SetMotion(MOTION_LEFTBOOST);
+
+				// 地上にいたら
+				if (m_bJump == false)
+				{
+					// 砂の生成
+					CSand::Create(D3DXVECTOR3(m_pos.x, 0.0f, m_pos.z),
+						D3DXVECTOR3(0.0f, 0.0f, 0.0f), D3DXVECTOR3(m_rot.x + 0.0f, m_rot.y, m_rot.z + 0.0f),
+						D3DXVECTOR3(SAND_SIZE_X, SAND_SIZE_Y, SAND_SIZE_Z));
+				}
+			}
+		}
+
 
 		// Wキーを押したとき
 		if (pKeyboard->GetPress(DIK_W) && pKeyboard->GetTrigger(DIK_RSHIFT))
@@ -1622,6 +1699,11 @@ void CPlayer::Dush(void)
 		m_bDush = false;
 		m_bDushInter = true;
 
+		if (m_bFront == true)
+		{
+			m_bFront = false;
+		}
+
 		for (int nCount = 0; nCount < MAX_BOOST; nCount++)
 		{
 			if (m_pBoost[nCount] != NULL)
@@ -1637,6 +1719,41 @@ void CPlayer::Dush(void)
 	{
 		m_nDushInterCnt = 0;
 		m_bDushInter = false;
+	}
+
+	// 前ダッシュの処理
+	if (m_bFront == true)
+	{
+		// 変数宣言
+		CPlayer *pTarget = NULL;
+
+		// 相手プレイヤーの情報代入
+		switch (m_nPlayerNum)
+		{
+		case 0:
+			pTarget = CGame::GetPlayer(1);
+			break;
+		case 1:
+			pTarget = CGame::GetPlayer(1);
+			break;
+		}
+
+		// 相手と弾の距離
+		float fDistance = sqrtf(
+			powf((pTarget->GetPos().x - m_pos.x), 2) +
+			powf((pTarget->GetPos().z - m_pos.z), 2));
+
+		if (fDistance >= PLAYER_DUSH_DISTANCE)
+		{
+			//移動量の計算
+			m_move = VectorMath(D3DXVECTOR3(
+				pTarget->GetPos().x, pTarget->GetPos().y + 0.0f, pTarget->GetPos().z), PLAYER_DUSH);
+		}
+		else
+		{
+			m_bFront = false;
+			m_nDushFlame = PLAYER_DUSH_INTER;
+		}
 	}
 }
 
@@ -2042,6 +2159,28 @@ void CPlayer::BlockUp(void)
 		m_bFall = false;
 	}
 }
+
+//=============================================================================
+// バレットクラスののベクトル計算処理
+//=============================================================================
+D3DXVECTOR3 CPlayer::VectorMath(D3DXVECTOR3 TargetPos, float fSpeed)
+{
+	//2点間のベクトルを求める（終点[目標地点] - 始点[自身の位置]）
+	D3DXVECTOR3 Vector = TargetPos - m_pos;
+
+	//ベクトルの大きさを求める(√c^2 = a^2 * b^2)
+	float fVectorSize = D3DXVec3Length(&Vector);
+
+	//単位ベクトル用変数
+	D3DXVECTOR3 UnitVector;
+
+	//単位ベクトルを求める(元のベクトル / ベクトルの大きさ)
+	D3DXVec3Normalize(&UnitVector, &Vector);
+
+	//単位ベクトルを速度倍にして返す(UnitVector * fSpeed)
+	return	UnitVector * fSpeed;
+}
+
 
 //=============================================================================
 // ファイル読み込み処理
